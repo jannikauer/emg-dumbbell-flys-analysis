@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
 import scipy.signal as signal
 
-# %% import_data (adjusted from lab3functions)
+
+# %% import_data 
 def import_data(separator):
     def time_norm(data):
         a = list(data.iloc[:][:]['t'])
@@ -27,25 +27,27 @@ def import_data(separator):
     column_names = [
         'emg_chest', 'emg_shoulder', 't'
     ]
-    # Creating an empty Dataframe with column names only
     flys_raw = pd.DataFrame(columns=column_names)
     mvc_raw = pd.DataFrame(columns=column_names)
 
-    for i in range(1,3):
+    for i in range(1, 3):
         mvc_string = f"./data/mvc_test/mvc_test_{i}.txt"
 
         mcv_data = pd.read_csv(
             mvc_string,
             sep=separator, names=column_names, skiprows=50,
-            skipfooter=50
+            skipfooter=50,
+            engine="python"
         )
         mvc_raw = pd.concat([mvc_raw, mcv_data], ignore_index=True)
 
-    for i in range(1,4):
+    for i in range(1, 4):
         flys_string = f"data/dumbbell_flys_angle_test/dumbbell_flys_test_{i}.txt"
         flys_data = pd.read_csv(flys_string,
                                 sep=separator, names=column_names, skiprows=50,
-                                skipfooter=50)
+                                skipfooter=50,
+                                engine="python"
+                                )
         flys_raw = pd.concat([flys_raw, flys_data], ignore_index=True)
 
     flys = time_norm(flys_raw)
@@ -54,7 +56,6 @@ def import_data(separator):
 
 
 # %%
-# MVC
 
 def raw(emgC, emgS, mvc_time):
     fig, axs = plt.subplots(1, 2, figsize=(15, 5))
@@ -64,7 +65,7 @@ def raw(emgC, emgS, mvc_time):
     axs[1].set_title("MVC Raw EMG Shoulder")
 
 
-def bandpass_filter(emgC, emgS, time):
+def bandpass_filter(emg_chest, emg_shoulder, time):
     fs = 1000
     lowcut = 20
     highcut = 450
@@ -74,22 +75,22 @@ def bandpass_filter(emgC, emgS, time):
     order = 4
 
     b, a = signal.butter(order, [low, high], "bandpass", analog=False)
-    filtered_chest_signal = signal.filtfilt(b, a, emgC, axis=0)
+    filtered_chest_signal = signal.filtfilt(b, a, emg_chest, axis=0)
 
     b, a = signal.butter(order, [low, high], "bandpass", analog=False)
-    filtered_shoudler_signal = signal.filtfilt(b, a, emgS, axis=0)
+    filtered_shoudler_signal = signal.filtfilt(b, a, emg_shoulder, axis=0)
 
     return filtered_chest_signal, filtered_shoudler_signal
 
 
-def rectifier(emgC, emgS, time):
-    AbsolutwerteC = np.abs(emgC)
-    AbsolutwerteS = np.abs(emgS)
+def rectifier(emg_chest, emg_shoulder, time):
+    absolute_values_chest = np.abs(emg_chest)
+    absolute_values_shoulder = np.abs(emg_shoulder)
 
-    return AbsolutwerteC, AbsolutwerteS
+    return absolute_values_chest, absolute_values_shoulder
 
 
-def envelope(emgc, emgs, time):
+def envelope(emg_chest, emg_shoulder, time):
     fs = 1000
     lowcut = 5
     nyq = 0.5 * fs
@@ -97,12 +98,12 @@ def envelope(emgc, emgs, time):
     order = 4
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yC = signal.filtfilt(b, a, emgc, axis=0)
+    y_chest = signal.filtfilt(b, a, emg_chest, axis=0)
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yS = signal.filtfilt(b, a, emgs, axis=0)
+    y_shoulder = signal.filtfilt(b, a, emg_shoulder, axis=0)
 
-    return yC, yS
+    return y_chest, y_shoulder
 
 
 def plot(SR, SF, SE, yS, time, time1):
@@ -118,7 +119,7 @@ def plot(SR, SF, SE, yS, time, time1):
     axs[1][1].axvline(x=81, ymin=0, ymax=1800, color="red", label="90° Markers", alpha=0.6)
     axs[1][1].axvline(x=85, ymin=0, ymax=1800, color="red", alpha=0.6)
 
-    plt.savefig("Verarbeitung.png")
+    plt.savefig("processed_signal.png")
 
     for ax in axs.flat:
         ax.set_ylabel('EMG (mV)', labelpad=2)
@@ -147,26 +148,24 @@ def plot_all(CR, SR, CF, SF, CA, SA, CE, SE, time):
         ax.legend(loc="upper right")
 
 
-
-
-def seperate_1(emgc, emgs, time):
+def seperate_1(emg_chest, emg_shoulder, time):
     fs = 1000
-    lowcut = 15 
+    lowcut = 15
     nyq = 0.5 * fs
     low = lowcut / nyq
     order = 4
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yC = signal.filtfilt(b, a, emgc, axis=0)
+    y_chest = signal.filtfilt(b, a, emg_chest, axis=0)
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yS = signal.filtfilt(b, a, emgs, axis=0)
+    y_shoulder = signal.filtfilt(b, a, emg_shoulder, axis=0)
 
     fig, axs = plt.subplots(1, 2, figsize=(15, 5))
-    axs[0].plot(time / 1000, yC)
-    axs[0].set_title("EMG Chest")
-    axs[1].plot(time / 1000, yS)
-    axs[1].set_title("EMG Shoulder")
+    axs[0].plot(time / 1000, y_chest)
+    axs[0].set_title("EMG chest")
+    axs[1].plot(time / 1000, y_shoulder)
+    axs[1].set_title("EMG shoulder")
 
     axs[0].axvline(x=22.5, ymin=0, ymax=1800, color="red", label="90°")
     axs[0].axvline(x=26.5, ymin=0, ymax=1800, color="red")
@@ -187,27 +186,27 @@ def seperate_1(emgc, emgs, time):
         ax.set_xlabel('Time (sec)', labelpad=2)
         ax.legend(loc="upper right")
 
-    return yC, yS
+    return y_chest, y_shoulder
 
 
-def seperate_2(emgc, emgs, time):
+def seperate_2(emg_chest, emg_shoulder, time):
     fs = 1000
-    lowcut = 15 
+    lowcut = 15
     nyq = 0.5 * fs
     low = lowcut / nyq
     order = 4
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yC = signal.filtfilt(b, a, emgc, axis=0)
+    y_chest = signal.filtfilt(b, a, emg_chest, axis=0)
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yS = signal.filtfilt(b, a, emgs, axis=0)
+    y_shoulder = signal.filtfilt(b, a, emg_shoulder, axis=0)
 
     fig, axs = plt.subplots(1, 2, figsize=(15, 5))
-    axs[0].plot(time / 1000, yC)
-    axs[0].set_title("EMG Chest")
-    axs[1].plot(time / 1000, yS)
-    axs[1].set_title("EMG Shoulder")
+    axs[0].plot(time / 1000, y_chest)
+    axs[0].set_title("EMG _cheiwthest")
+    axs[1].plot(time / 1000, y_shoulder)
+    axs[1].set_title("EMG shoulder")
 
     axs[0].axvline(x=51, ymin=0, ymax=1800, color="red", label="90°")
     axs[0].axvline(x=55, ymin=0, ymax=1800, color="red")
@@ -228,27 +227,27 @@ def seperate_2(emgc, emgs, time):
         ax.set_xlabel('Time (sec)', labelpad=2)
         ax.legend(loc="upper right")
 
-    return yC, yS
+    return y_chest, y_shoulder
 
 
-def seperate_3(emgc, emgs, time):
+def seperate_3(emg_chest, emg_shoulder, time):
     fs = 1000
-    lowcut = 15 
+    lowcut = 15
     nyq = 0.5 * fs
     low = lowcut / nyq
     order = 4
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yC = signal.filtfilt(b, a, emgc, axis=0)
+    y_chest = signal.filtfilt(b, a, emg_chest, axis=0)
 
     b, a = signal.butter(order, [low], "lowpass", analog=False)
-    yS = signal.filtfilt(b, a, emgs, axis=0)
+    y_shoulder = signal.filtfilt(b, a, emg_shoulder, axis=0)
 
     fig, axs = plt.subplots(1, 2, figsize=(15, 5))
-    axs[0].plot(time / 1000, yC)
-    axs[0].set_title("EMG Chest")
-    axs[1].plot(time / 1000, yS)
-    axs[1].set_title("EMG Shoulder")
+    axs[0].plot(time / 1000, y_chest)
+    axs[0].set_title("EMG chest")
+    axs[1].plot(time / 1000, y_shoulder)
+    axs[1].set_title("EMG shoulder")
 
     axs[0].axvline(x=81, ymin=0, ymax=1800, color="red", label="90°")
     axs[0].axvline(x=85, ymin=0, ymax=1800, color="red")
@@ -269,7 +268,7 @@ def seperate_3(emgc, emgs, time):
         ax.set_xlabel('Time (sec)', labelpad=2)
         ax.legend(loc="upper right")
 
-    return yC, yS
+    return y_chest, y_shoulder
 
 
 def bandpass_filter_mvcvalue(emg, time):
@@ -286,9 +285,9 @@ def bandpass_filter_mvcvalue(emg, time):
 
 
 def rectifier_mvcvalue(emg, time):
-    Absolutwerte = np.abs(emg)
+    absolute_values = np.abs(emg)
 
-    return Absolutwerte
+    return absolute_values
 
 
 def envelope_mvcvalue(emg, time):
@@ -310,35 +309,35 @@ def mvc_value(emg, time):
     return d
 
 
-def create_bar_chart(Percent1C, Percent2C, Percent3C, Percent1S, Percent2S, Percent3S):
+def create_bar_chart(percentage_1_chest, percentage_2_chest, percentage_3_chest, percentage_1_shoulder,
+                     percentage_2_shoulder, percentage_3_shoulder):
     fig = plt.figure()
     ax = fig.add_axes([0, 0, 1, 1])
     position = ['0°', '45°', '90°']
     index = np.arange(3)
     bar_width = 0.35
     opacity = 0.8
-    PercentC = [Percent1C, Percent2C, Percent3C]
-    PercentS = [Percent1S, Percent2S, Percent3S]
+    percentage__chest = [percentage_1_chest, percentage_2_chest, percentage_3_chest]
+    percentage__shoulder = [percentage_1_shoulder, percentage_2_shoulder, percentage_3_shoulder]
     plt.xticks(index + (bar_width / 2), position)
     plt.xlabel("Position")
-    plt.ylabel("% of MVC Value")
+    plt.ylabel("% of MV_chest Value")
     ax.set_title("Relative Muscle Activity")
-    ax.bar(index, PercentC, bar_width, alpha=opacity, label='Chest')
-    ax.bar(index + bar_width, PercentS, bar_width, alpha=opacity, label='Shoulder')
+    ax.bar(index, percentage__chest, bar_width, alpha=opacity, label='chest')
+    ax.bar(index + bar_width, percentage__shoulder, bar_width, alpha=opacity, label='shoulder')
     ax.legend(loc="upper right")
-    plt.savefig("Relative Muscle Activity.png")
+    plt.savefig("relative_muscle_activity.png")
 
 
-# %%
-def trajectory_position(Data1, Data2, Data3):
-    Einhüllende1 = pd.DataFrame(Data1)
-    Einhüllende2 = pd.DataFrame(Data2)
-    Einhüllende3 = pd.DataFrame(Data3)
+def trajectory_position(data_1, data_2, data_3):
+    envelope_1 = pd.DataFrame(data_1)
+    envelope_2 = pd.DataFrame(data_2)
+    envelope_3 = pd.DataFrame(data_3)
 
-    length = len(Einhüllende1)
+    length = len(envelope_1)
     array = np.ones(length)
 
     for i in range(0, length):
-        array[i] = np.average([Einhüllende1.iloc[i], Einhüllende2.iloc[i], Einhüllende3.iloc[i]])
+        array[i] = np.average([envelope_1.iloc[i], envelope_2.iloc[i], envelope_3.iloc[i]])
     time = np.linspace(0, length, length)
     return array
