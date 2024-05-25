@@ -321,7 +321,7 @@ def create_bar_chart(percentage_1_chest, percentage_2_chest, percentage_3_chest,
     percentage__shoulder = [percentage_1_shoulder, percentage_2_shoulder, percentage_3_shoulder]
     plt.xticks(index + (bar_width / 2), position)
     plt.xlabel("Position")
-    plt.ylabel("% of MV_chest Value")
+    plt.ylabel("% of MVC Value")
     ax.set_title("Relative Muscle Activity")
     ax.bar(index, percentage__chest, bar_width, alpha=opacity, label='chest')
     ax.bar(index + bar_width, percentage__shoulder, bar_width, alpha=opacity, label='shoulder')
